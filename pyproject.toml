@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lestinxor"
+version = "0.1.0"
+description = "Lestinxor — a Gauntlet-driven agent: gated, self-correcting stage loops under a Governor."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+lestinxor = "lestinxor.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["lestinxor*"]
