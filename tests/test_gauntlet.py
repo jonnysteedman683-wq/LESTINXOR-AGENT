@@ -1,8 +1,20 @@
 import unittest
 
 from lestinxor import (
-    DEFAULT_STAGES, JUDGE_SYSTEM, Budget, Gate, Gauntlet, Governor, ManualClock, NoHelp,
-    ScriptedHelp, ScriptedLLM, Stage, Trace, Verdict, parse_gate,
+    DEFAULT_STAGES,
+    JUDGE_SYSTEM,
+    Budget,
+    Gate,
+    Gauntlet,
+    Governor,
+    ManualClock,
+    NoHelp,
+    ScriptedHelp,
+    ScriptedLLM,
+    Stage,
+    Trace,
+    Verdict,
+    parse_gate,
 )
 
 
@@ -44,6 +56,7 @@ class GauntletTests(unittest.TestCase):
             if any("Operator guidance" in n for n in ctx.feedback.get(s.name, [])):
                 return Gate(Verdict.PASS)
             return Gate(Verdict.RETRY, "stuck")
+
         help = ScriptedHelp(["use y"])
         r = make([Stage("a", "do", gate)], help=help, budget=Budget(max_iterations=2)).run("t")
         self.assertTrue(r.ok)
@@ -60,8 +73,12 @@ class GauntletTests(unittest.TestCase):
             if not ctx.attempts("test"):
                 return Gate(Verdict.REVERT, "bad plan", "plan")
             return Gate(Verdict.PASS)
-        stages = [Stage("plan", "p", gate_always()), Stage("execute", "e", gate_always()),
-                  Stage("test", "t", test_gate)]
+
+        stages = [
+            Stage("plan", "p", gate_always()),
+            Stage("execute", "e", gate_always()),
+            Stage("test", "t", test_gate),
+        ]
         r = make(stages).run("t")
         self.assertTrue(r.ok)
         self.assertEqual(len(r.context.attempts("plan")), 2)
@@ -71,6 +88,7 @@ class GauntletTests(unittest.TestCase):
     def test_invalid_revert_becomes_retry(self):
         def gate(ctx, s, o, it, llm):
             return Gate(Verdict.REVERT, "x", "nope") if it == 1 else Gate(Verdict.PASS)
+
         r = make([Stage("a", "do", gate)]).run("t")
         self.assertTrue(r.ok)
         self.assertIs(r.context.history[0].gate.verdict, Verdict.RETRY)
@@ -82,8 +100,9 @@ class GauntletTests(unittest.TestCase):
         self.assertIn("help budget exhausted", r.reason)
 
     def test_step_budget(self):
-        r = make([Stage("a", "do", gate_always(Verdict.RETRY, "x"))],
-                 budget=Budget(max_iterations=100, max_steps=5)).run("t")
+        r = make(
+            [Stage("a", "do", gate_always(Verdict.RETRY, "x"))], budget=Budget(max_iterations=100, max_steps=5)
+        ).run("t")
         self.assertFalse(r.ok)
         self.assertIn("step budget", r.reason)
         self.assertEqual(len(r.context.history), 5)
@@ -93,6 +112,7 @@ class GauntletTests(unittest.TestCase):
             g = make([Stage(n, "do", gate_always()) for n in "abc"])
             g.run("t")
             return g.trace.digest()
+
         self.assertEqual(run(), run())
 
     def test_duplicate_stage_names_rejected(self):

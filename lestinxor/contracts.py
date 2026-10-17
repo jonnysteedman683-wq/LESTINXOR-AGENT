@@ -1,4 +1,5 @@
 """Core data contracts. Pure data — no I/O, no clocks, no randomness."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -6,11 +7,11 @@ from enum import Enum
 
 
 class Verdict(str, Enum):
-    PASS = "pass"      # accept output, advance to next stage
-    RETRY = "retry"    # redo this stage with feedback
+    PASS = "pass"  # accept output, advance to next stage
+    RETRY = "retry"  # redo this stage with feedback
     REVERT = "revert"  # fault originates upstream; roll back to an earlier stage
-    HELP = "help"      # escalate to the operator
-    ABORT = "abort"    # stop the run (Governor-only)
+    HELP = "help"  # escalate to the operator
+    ABORT = "abort"  # stop the run (Governor-only)
 
 
 @dataclass(frozen=True)
@@ -30,11 +31,12 @@ class Attempt:
 
 @dataclass
 class Context:
-    """Working memory for one run."""
+    """Working memory for one inner-loop run."""
+
     task: str
-    artifacts: dict[str, str] = field(default_factory=dict)       # accepted output per stage
+    artifacts: dict[str, str] = field(default_factory=dict)  # accepted output per stage
     feedback: dict[str, list[str]] = field(default_factory=dict)  # notes fed into the next attempt
-    history: list[Attempt] = field(default_factory=list)          # every attempt, in order
+    history: list[Attempt] = field(default_factory=list)  # every attempt, in order
 
     def add_feedback(self, stage: str, note: str) -> None:
         self.feedback.setdefault(stage, []).append(note)
@@ -55,4 +57,8 @@ class Result:
 
     @property
     def deliverable(self) -> str:
-        return self.context.artifacts.get("execute", "")
+        """The `execute` artifact if present, otherwise the last accepted artifact."""
+        artifacts = self.context.artifacts
+        if "execute" in artifacts:
+            return artifacts["execute"]
+        return next(reversed(artifacts.values()), "")

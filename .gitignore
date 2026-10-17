@@ -6,3 +6,8 @@ dist/
 .venv/
 .pytest_cache/
 lestinxor-trace.jsonl
+.coverage
+.ruff_cache/
+.mypy_cache/
+*.mmd
+graph.json

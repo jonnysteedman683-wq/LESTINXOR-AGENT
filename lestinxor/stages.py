@@ -1,9 +1,10 @@
 """Stages and gates. A stage produces output; its gate decides the verdict."""
+
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 from .contracts import Context, Gate, Verdict
 from .llm import LLM
@@ -17,8 +18,7 @@ SYSTEM = (
 )
 
 JUDGE_SYSTEM = (
-    "You are the Lestinxor gatekeeper. Be strict and specific. "
-    "Reply with a single JSON object and nothing else."
+    "You are the Lestinxor gatekeeper. Be strict and specific. Reply with a single JSON object and nothing else."
 )
 
 
@@ -35,8 +35,7 @@ class Stage:
             parts.append(f"[{name.upper()} — accepted]\n{output}")
         notes = ctx.feedback.get(self.name)
         if notes:
-            parts.append("FEEDBACK ON PREVIOUS ATTEMPTS (address all):\n"
-                         + "\n".join(f"- {n}" for n in notes))
+            parts.append("FEEDBACK ON PREVIOUS ATTEMPTS (address all):\n" + "\n".join(f"- {n}" for n in notes))
         parts.append(f"CURRENT STAGE: {self.name}\n{self.instruction}")
         return "\n\n".join(parts)
 
@@ -67,7 +66,7 @@ def parse_gate(raw: str) -> Gate:
     data = None
     if start != -1 and end > start:
         try:
-            data = json.loads(raw[start:end + 1])
+            data = json.loads(raw[start : end + 1])
         except json.JSONDecodeError:
             data = None
     if not isinstance(data, dict):
@@ -82,28 +81,47 @@ def parse_gate(raw: str) -> Gate:
 
 
 DEFAULT_STAGES: tuple[Stage, ...] = (
-    Stage("understand",
-          "Restate the goal. List constraints, testable success criteria, and open unknowns.",
-          criteria="Success criteria are concrete and testable; unknowns are flagged, not guessed."),
-    Stage("brainstorm",
-          "Generate 3-5 genuinely distinct approaches. One line of rationale each.",
-          criteria="Approaches differ in mechanism, not just wording."),
-    Stage("predict",
-          "For each approach, predict the outcome, failure modes, cost, and likelihood of success.",
-          criteria="Every approach has specific failure modes, not generic risks."),
-    Stage("compare",
-          "Score approaches against the success criteria using the predictions. Choose one and justify it.",
-          criteria="Choice follows from the scores; trade-offs are explicit."),
-    Stage("plan",
-          "Write ordered steps for the chosen approach. Give each step a verification check.",
-          criteria="Every step is actionable and has a check."),
-    Stage("execute",
-          "Carry out the plan and produce the full deliverable.",
-          criteria="Deliverable is complete and follows the plan."),
-    Stage("test",
-          "Check the deliverable against every success criterion and plan check. Report pass/fail per item.",
-          criteria="Pass only if every criterion passes. On failure, revert to the stage where the fault originates."),
-    Stage("reflect",
-          "State lessons learned, residual risks, and what to do differently next time.",
-          criteria="Specific and actionable."),
+    Stage(
+        "understand",
+        "Restate the goal. List constraints, testable success criteria, and open unknowns.",
+        criteria="Success criteria are concrete and testable; unknowns are flagged, not guessed.",
+    ),
+    Stage(
+        "brainstorm",
+        "Generate 3-5 genuinely distinct approaches. One line of rationale each.",
+        criteria="Approaches differ in mechanism, not just wording.",
+    ),
+    Stage(
+        "predict",
+        "For each approach, predict the outcome, failure modes, cost, and likelihood of success.",
+        criteria="Every approach has specific failure modes, not generic risks.",
+    ),
+    Stage(
+        "compare",
+        "Score approaches against the success criteria using the predictions. Choose one and justify it.",
+        criteria="Choice follows from the scores; trade-offs are explicit.",
+    ),
+    Stage(
+        "plan",
+        "Write ordered steps for the chosen approach. Give each step a verification check.",
+        criteria="Every step is actionable and has a check.",
+    ),
+    Stage(
+        "execute",
+        "Carry out the plan and produce the full deliverable.",
+        criteria="Deliverable is complete and follows the plan.",
+    ),
+    Stage(
+        "test",
+        "Check the deliverable against every success criterion and plan check. Report pass/fail per item.",
+        criteria="Pass only if every criterion passes. On failure, revert to the stage where the fault originates.",
+    ),
+    Stage(
+        "reflect",
+        "State lessons learned, residual risks, and what to do differently next time.",
+        criteria="Specific and actionable.",
+    ),
 )
+
+# Lean inner loop for outer-loop branches: the outer loop already diverges, predicts and compares.
+COMPACT_STAGES: tuple[Stage, ...] = tuple(s for s in DEFAULT_STAGES if s.name in {"plan", "execute", "test"})

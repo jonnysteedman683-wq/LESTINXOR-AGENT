@@ -1,4 +1,5 @@
 """The Governor: budget enforcement and verdict review. Sole authority to abort."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -8,10 +9,10 @@ from .contracts import Gate, Verdict
 
 @dataclass(frozen=True)
 class Budget:
-    max_iterations: int = 3   # attempts per stage before escalating to help
-    max_steps: int = 40       # total stage attempts per run
-    max_reverts: int = 4      # rollbacks per run
-    max_help: int = 2         # operator escalations per run
+    max_iterations: int = 3  # attempts per stage before escalating to help
+    max_steps: int = 40  # total stage attempts per run
+    max_reverts: int = 4  # rollbacks per run
+    max_help: int = 2  # operator escalations per run
 
 
 class Governor:

@@ -1,7 +1,9 @@
 """Help channels: how Lestinxor asks the operator when it is stuck."""
+
 from __future__ import annotations
 
-from typing import Iterable, Protocol
+from collections.abc import Iterable
+from typing import Protocol
 
 from .contracts import Context
 
