@@ -8,6 +8,8 @@ from dataclasses import dataclass
 
 from .contracts import Context, Gate, Verdict
 from .llm import LLM
+from .tool_loop import ToolCall, format_tool_log, run_with_tools
+from .trace import Trace
 
 GateFn = Callable[[Context, "Stage", str, int, LLM], Gate]
 
@@ -28,6 +30,8 @@ class Stage:
     instruction: str
     gate: GateFn | None = None  # None -> LLM judge
     criteria: str = ""
+    tools: tuple[str, ...] = ()  # tools this stage may call (only when the run has a toolbox)
+    max_tool_calls: int = 8
 
     def prompt(self, ctx: Context) -> str:
         parts = [f"TASK:\n{ctx.task}"]
@@ -39,8 +43,19 @@ class Stage:
         parts.append(f"CURRENT STAGE: {self.name}\n{self.instruction}")
         return "\n\n".join(parts)
 
-    def run(self, ctx: Context, llm: LLM) -> str:
-        return llm.complete(SYSTEM, self.prompt(ctx))
+    def run(self, ctx: Context, llm: LLM, trace: Trace | None = None) -> str:
+        if not (self.tools and ctx.tools):
+            return llm.complete(SYSTEM, self.prompt(ctx))
+
+        def log(call: ToolCall) -> None:
+            if trace is not None:
+                r = call.result
+                trace.emit(
+                    "tool", stage=self.name, name=call.name, args=call.args, ok=r.ok, error=r.error, output=r.output
+                )
+
+        text, calls = run_with_tools(llm, SYSTEM, self.prompt(ctx), ctx.tools, self.tools, self.max_tool_calls, log)
+        return f"{text}\n\n{format_tool_log(calls)}" if calls else text
 
     def evaluate(self, ctx: Context, output: str, iteration: int, llm: LLM) -> Gate:
         return (self.gate or llm_judge)(ctx, self, output, iteration, llm)
@@ -56,7 +71,8 @@ def llm_judge(ctx: Context, stage: Stage, output: str, iteration: int, llm: LLM)
         'Return {"verdict": "pass"|"retry"|"revert"|"help", "reason": "...", "revert_to": <stage|null>}.\n'
         f"- revert only if the flaw originates upstream; revert_to must be one of {earlier}.\n"
         "- help only if progress needs information or a decision you cannot supply.\n"
-        "- retry reasons must say exactly what to fix."
+        "- retry reasons must say exactly what to fix.\n"
+        "- if a [TOOL LOG] is present, trust it over claims in the prose; failed runs mean the stage failed."
     )
     return parse_gate(llm.complete(JUDGE_SYSTEM, prompt))
 
@@ -79,6 +95,9 @@ def parse_gate(raw: str) -> Gate:
         verdict = Verdict.HELP
     return Gate(verdict, str(data.get("reason", "")), data.get("revert_to") or None)
 
+
+READ_TOOLS = ("list_files", "read_file")
+EXEC_TOOLS = ("run_python", "run_command")
 
 DEFAULT_STAGES: tuple[Stage, ...] = (
     Stage(
@@ -105,16 +124,21 @@ DEFAULT_STAGES: tuple[Stage, ...] = (
         "plan",
         "Write ordered steps for the chosen approach. Give each step a verification check.",
         criteria="Every step is actionable and has a check.",
+        tools=READ_TOOLS,
     ),
     Stage(
         "execute",
         "Carry out the plan and produce the full deliverable.",
         criteria="Deliverable is complete and follows the plan.",
+        tools=(*READ_TOOLS, "write_file", *EXEC_TOOLS),
+        max_tool_calls=16,
     ),
     Stage(
         "test",
         "Check the deliverable against every success criterion and plan check. Report pass/fail per item.",
         criteria="Pass only if every criterion passes. On failure, revert to the stage where the fault originates.",
+        tools=(*READ_TOOLS, *EXEC_TOOLS),
+        max_tool_calls=12,
     ),
     Stage(
         "reflect",

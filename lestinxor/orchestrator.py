@@ -22,6 +22,7 @@ from .help import NoHelp
 from .llm import LLM
 from .operators import SYNTH_SYSTEM, crossover_brief, mutate_brief, seed_brief, synthesis_prompt
 from .router import Router
+from .sandbox import ToolboxFactory
 from .scoring import LLMScorer, Score, Scorer
 from .stages import COMPACT_STAGES, Stage
 from .strategies import DEFAULT_STRATEGIES, MUTATIONS, AdaptiveSampler, Strategy
@@ -40,7 +41,7 @@ class OrchestratorConfig:
     elite: int = 2  # survivors carried forward
     immigrants: int = 1  # fresh seeds per generation (keeps exploring)
     crossover_rate: float = 0.25
-    synthesize: bool = True  # fuse final survivors; kept only if it scores at least as well
+    synthesize: bool = True  # fuse final survivors (text runs only); kept only if it scores at least as well
     workers: int = 1  # parallel branches; results are order-independent
     seed: int = 0
     strategies: tuple[Strategy, ...] = DEFAULT_STRATEGIES
@@ -48,6 +49,7 @@ class OrchestratorConfig:
     inner_stages: tuple[Stage, ...] = COMPACT_STAGES
     inner_budget: Budget = INNER_BUDGET
     policy: ConvergencePolicy = field(default_factory=ConvergencePolicy)
+    toolbox_factory: ToolboxFactory | None = None  # per-thought tools, e.g. sandbox.workspace_factory(root)
 
     def __post_init__(self) -> None:
         for name in ("population", "branch_factor", "elite", "workers"):
@@ -74,6 +76,7 @@ class OrchestratorConfig:
             "mutations": [m.name for m in self.mutations],
             "inner_stages": [s.name for s in self.inner_stages],
             "inner_budget": asdict(self.inner_budget),
+            "tools": self.toolbox_factory is not None,
             "policy": asdict(self.policy),
         }
 
@@ -84,6 +87,7 @@ class _Outcome:
     score: Score | None
     events: list[dict[str, Any]]
     error: str | None = None
+    workspace: str = ""
 
 
 @dataclass
@@ -139,7 +143,8 @@ class Orchestrator:
             survivors = self._step(task, graph, gen, batch, survivors)
 
         best = survivors[0] if survivors else None
-        if best is not None and cfg.synthesize and len(survivors) >= 2:
+        # With tools the deliverable is the workspace; a text-only fusion would detach the answer from its artifacts.
+        if best is not None and cfg.synthesize and cfg.toolbox_factory is None and len(survivors) >= 2:
             best = self._synthesize(task, graph, gen + 1, survivors, best)
 
         weights = {"strategies": self.strategies.snapshot(), "mutations": self.mutations.snapshot()}
@@ -200,6 +205,7 @@ class Orchestrator:
             for ev in out.events:
                 rest = {k: v for k, v in ev.items() if k not in ("seq", "ts", "kind")}
                 self.trace.emit("inner", thought=node.id, inner_kind=ev["kind"], inner_seq=ev["seq"], **rest)
+            node.workspace = out.workspace
             if out.result is not None:
                 node.inner_steps = len(out.result.context.history)
             if out.error:
@@ -215,7 +221,12 @@ class Orchestrator:
     def _work(self, task: str, node: Thought) -> _Outcome:
         """Inner loop + scoring for one thought. Runs on worker threads; touches no shared state."""
         trace = Trace(clock=ManualClock())
+        workspace = ""
         try:
+            factory = self.config.toolbox_factory
+            tools = factory(node.id, node.parents) if factory else None
+            if tools is not None and tools.workspace is not None:
+                workspace = str(tools.workspace)
             result = Gauntlet(
                 self.router.get("inner"),
                 stages=self.config.inner_stages,
@@ -223,11 +234,12 @@ class Orchestrator:
                 help=NoHelp(),
                 trace=trace,
                 judge=self.router.get("gate"),
+                tools=tools,
             ).run(node.brief)
             score = self.scorer.score(task, result.deliverable) if result.ok else None
-            return _Outcome(result, score, trace.events)
+            return _Outcome(result, score, trace.events, workspace=workspace)
         except Exception as exc:  # a failed branch must never take down the run
-            return _Outcome(None, None, trace.events, f"{type(exc).__name__}: {exc}")
+            return _Outcome(None, None, trace.events, f"{type(exc).__name__}: {exc}", workspace)
 
     def _adapt(self, graph: ThoughtGraph, batch: list[Thought]) -> None:
         for node in batch:

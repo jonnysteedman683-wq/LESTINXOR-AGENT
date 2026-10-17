@@ -180,6 +180,46 @@ class CLITests(unittest.TestCase):
         self.assertEqual(code, 0, err)
         self.assertTrue(all(url.endswith("/chat/completions") for url, _, _ in reqs))
 
+    def test_tool_flags(self):
+        with tempfile.TemporaryDirectory() as d:
+            ws, t = Path(d) / "ws", str(Path(d) / "t.jsonl")
+            code, _, err, _ = self.run_cli(
+                "gauntlet",
+                "t",
+                "--model",
+                "m",
+                "--unattended",
+                "--trace",
+                t,
+                "--workspace",
+                str(ws),
+                "--allow-exec",
+                "--check",
+                "python -c pass",
+            )
+            self.assertEqual(code, 0, err)
+            self.assertTrue(ws.is_dir())
+            code, _, err, _ = self.run_cli(
+                "orchestrate",
+                "t",
+                "--model",
+                "m",
+                "--workers",
+                "1",
+                "--trace",
+                t,
+                "--workspace",
+                str(Path(d) / "runs"),
+                "--allow-exec",
+                "--check",
+                "python -c pass",
+            )
+            self.assertEqual(code, 0, err)
+            self.assertIn("workspace=", err)
+            for bad in (["--check", "x"], ["--allow-exec"]):
+                with self.assertRaises(SystemExit):
+                    self.run_cli("gauntlet", "t", "--model", "m", "--trace", t, *bad)
+
 
 if __name__ == "__main__":
     unittest.main()

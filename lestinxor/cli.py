@@ -2,6 +2,9 @@
 
 lestinxor orchestrate "task" --model <exact-model-string> [--judge-model ...] [--workers 4]
 lestinxor gauntlet    "task" --model <exact-model-string>
+
+Tools: --workspace DIR enables file tools; --allow-exec adds sandboxed execution; --check "pytest -q"
+gates the test stage on a real command before the LLM judge.
 """
 
 from __future__ import annotations
@@ -9,17 +12,23 @@ from __future__ import annotations
 import argparse
 import logging
 import os
+import shlex
 import sys
+from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
 
 from . import __version__
 from .convergence import ConvergencePolicy
+from .gates import chain, command_gate, with_gate
 from .gauntlet import Gauntlet
 from .governor import Budget, Governor
 from .help import ConsoleHelp, NoHelp
 from .llm import LLM, AnthropicLLM, OpenAICompatLLM, RetryingLLM
 from .orchestrator import Orchestrator, OrchestratorConfig
 from .router import Router
+from .sandbox import DEFAULT_COMMANDS, allow_command, sandbox_toolbox, workspace_factory
+from .stages import COMPACT_STAGES, DEFAULT_STAGES, Stage, llm_judge
 from .trace import Trace
 
 
@@ -33,6 +42,24 @@ def _build_llm(model: str, a: argparse.Namespace) -> LLM:
             raise SystemExit("--base-url is required for --provider openai")
         base = OpenAICompatLLM(model, a.base_url, api_key=key, max_tokens=a.max_tokens)
     return RetryingLLM(base)
+
+
+def _tool_kwargs(a: argparse.Namespace) -> dict[str, Any]:
+    if a.check and not a.allow_exec:
+        raise SystemExit("--check requires --allow-exec")
+    if (a.allow_exec or a.allow_cmd) and not a.workspace:
+        raise SystemExit("--allow-exec/--allow-cmd require --workspace")
+    commands = dict(DEFAULT_COMMANDS)
+    for name in a.allow_cmd:
+        commands[name] = allow_command(name)
+    scopes = ["fs.read", "fs.write", *(["exec"] if a.allow_exec else [])]
+    return {"scopes": scopes, "commands": commands, "timeout": a.tool_timeout}
+
+
+def _checked(stages: Sequence[Stage], check: str | None) -> tuple[Stage, ...]:
+    if not check:
+        return tuple(stages)
+    return with_gate(stages, "test", chain(command_gate(shlex.split(check)), llm_judge))
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -50,6 +77,11 @@ def _parser() -> argparse.ArgumentParser:
     common.add_argument("--max-tokens", type=int, default=4096)
     common.add_argument("--trace", default="lestinxor-trace.jsonl", help="JSONL trace path")
     common.add_argument("-v", "--verbose", action="store_true")
+    common.add_argument("--workspace", type=Path, help="enable file tools jailed to this directory")
+    common.add_argument("--allow-exec", action="store_true", help="grant sandboxed execution (run in a container!)")
+    common.add_argument("--allow-cmd", action="append", default=[], help="add a PATH program to the exec allowlist")
+    common.add_argument("--check", help='command that must pass for the test stage, e.g. "pytest -q"')
+    common.add_argument("--tool-timeout", type=float, default=30.0, help="seconds per tool process")
 
     g = sub.add_parser("gauntlet", parents=[common], help="single inner-loop run")
     g.add_argument("--max-iterations", type=int, default=3)
@@ -78,14 +110,17 @@ def main(argv: list[str] | None = None) -> int:
     llm = _build_llm(a.model, a)
     judge = _build_llm(a.judge_model, a) if a.judge_model else llm
     trace = Trace(path=a.trace)
+    tool_kwargs = _tool_kwargs(a)
 
     if a.command == "gauntlet":
         result = Gauntlet(
             llm,
+            stages=_checked(DEFAULT_STAGES, a.check),
             governor=Governor(Budget(max_iterations=a.max_iterations, max_steps=a.max_steps)),
             help=NoHelp() if a.unattended else ConsoleHelp(),
             trace=trace,
             judge=judge,
+            tools=sandbox_toolbox(a.workspace, **tool_kwargs) if a.workspace else None,
         ).run(a.task)
         print(result.deliverable)
         print(f"\n[{result.status}] {result.reason}".rstrip(), file=sys.stderr)
@@ -99,6 +134,8 @@ def main(argv: list[str] | None = None) -> int:
         seed=a.seed,
         synthesize=not a.no_synthesize,
         policy=ConvergencePolicy(target_score=a.target, max_generations=a.generations),
+        inner_stages=_checked(COMPACT_STAGES, a.check),
+        toolbox_factory=workspace_factory(a.workspace, **tool_kwargs) if a.workspace else None,
     )
     router = Router(llm, roles={"gate": judge, "score": judge})
     out = Orchestrator(router, config, trace=trace).run(a.task)
@@ -108,6 +145,8 @@ def main(argv: list[str] | None = None) -> int:
         a.mermaid.write_text(out.graph.to_mermaid(), encoding="utf-8")
     print(out.answer)
     best = f"{out.best.id} score {out.best.score:.2f}" if out.best else "none"
+    if out.best and out.best.workspace:
+        best += f" workspace={out.best.workspace}"
     print(f"\n[{out.stop_reason}] gens={out.generations} thoughts={len(out.graph)} best={best}", file=sys.stderr)
     return 0 if out.ok else 1
 

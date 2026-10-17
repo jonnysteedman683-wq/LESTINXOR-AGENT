@@ -2,6 +2,31 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] — 2026-10-17
+
+### Added
+- **Tool execution.** `Tool`, `Param`, `ToolResult` and `Toolbox`:
+  - Schemas are inferred from type hints.
+  - Every call is validated, permission-scoped (`fs.read`, `fs.write`, `exec`) and budgeted.
+  - Output is capped, and tool errors never raise into the loop.
+- **Sandbox** (`sandbox.py`):
+  - A `Workspace` jail that refuses `..`, absolute-path and symlink escapes.
+  - File tools: `read_file`, `write_file`, `list_files`.
+  - Opt-in exec tools: `run_python`, and `run_command` restricted to an allowlist with no shell.
+  - Subprocesses get a scrubbed environment (no API keys), CPU and address-space rlimits, a timeout, and a process-group kill on timeout.
+- **Tool loop** (`tool_loop.py`): a provider-agnostic text protocol that works with any backend. A `[TOOL LOG]` of each stage's calls is appended to its output, so gates and later stages see what actually ran.
+- **Gates** (`gates.py`): `command_gate` makes a stage pass or fail on a real command. `chain` runs cheap deterministic checks before the LLM judge. `with_gate` swaps a stage's gate.
+- **Per-thought workspaces** (`workspace_factory`): each branch gets its own workspace, and a child starts as a copy of its parent's, so mutations evolve real artifacts.
+- **CLI flags**: `--workspace`, `--allow-exec`, `--allow-cmd`, `--check`, `--tool-timeout`.
+
+### Changed
+- Default `plan`, `execute` and `test` stages declare tool allowlists. These take effect only when a toolbox is supplied.
+- The LLM judge is told to trust the `[TOOL LOG]` over claims in the prose.
+- Text synthesis is skipped when tools are on, because the best thought's workspace is the deliverable.
+
+### Fixed
+- Sandboxed Python runs with `-B`. `-E` ignores `PYTHONDONTWRITEBYTECODE`, so a same-size rewrite could be served from stale bytecode.
+
 ## [0.2.0] — 2026-10-17
 
 ### Added

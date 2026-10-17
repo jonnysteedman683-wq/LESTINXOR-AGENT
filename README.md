@@ -61,6 +61,51 @@ print(result.answer, result.stop_reason)
 print(result.graph.to_mermaid())
 ```
 
+## Tools
+
+Tools are opt-in and sandboxed. Without a toolbox, Lestinxor is a pure text agent.
+
+```bash
+# File tools only (read/write jailed to ./work)
+lestinxor gauntlet "Write a CSV parser module" --model <m> --workspace ./work
+
+# Plus execution, with the test stage gated on a real test run before the judge
+lestinxor orchestrate "Implement an LRU cache with tests" --model <m> \
+  --workspace ./runs --allow-exec --check "pytest -q" --workers 4
+```
+
+```python
+from lestinxor import (
+    Orchestrator,
+    OrchestratorConfig,
+    COMPACT_STAGES,
+    chain,
+    command_gate,
+    llm_judge,
+    with_gate,
+    workspace_factory,
+)
+
+stages = with_gate(COMPACT_STAGES, "test", chain(command_gate(["pytest", "-q"]), llm_judge))
+config = OrchestratorConfig(
+    inner_stages=stages,
+    toolbox_factory=workspace_factory("./runs", scopes=["fs.read", "fs.write", "exec"]),
+)
+result = Orchestrator(router, config).run("Implement an LRU cache with tests")
+print(result.best.workspace)  # the winning thought's files
+```
+
+| Piece | What it guarantees |
+|---|---|
+| `Toolbox` | Every call is checked against granted scopes, the stage's allowlist, the arg schema and the call budget. Output is capped. Errors come back as results; nothing raises. |
+| `Workspace` | File access is confined to its root. `..`, absolute paths and symlink escapes are refused. |
+| `run_python` / `run_command` | Require the `exec` scope. Allowlisted argv only, no shell. Scrubbed environment (no API keys). CPU and memory rlimits. Timeout with process-group kill. |
+| Tool loop | Works on any LLM backend. Each stage's output carries a `[TOOL LOG]`, so the judge sees evidence, not claims. |
+| `command_gate` + `chain` | A real check such as `pytest` decides before the LLM judge is billed. A failure can retry, or revert upstream with the failure output as feedback. |
+| `workspace_factory` | One workspace per thought. Children inherit their parent's files, so mutations evolve code rather than prose. |
+
+> **Security:** `exec` runs model-written code. The sandbox scrubs secrets and limits resources, but it shares the host's network and your user's permissions. Grant `exec` only inside a container or VM.
+
 ## Model roles
 
 | Role | Job |
@@ -100,6 +145,10 @@ lestinxor/
   scoring.py       Score, LLMScorer, FnScorer
   convergence.py   ConvergencePolicy, diversity, ConvergenceTracker
   router.py        role-based model routing
+  tools.py         Tool, Param, ToolResult, Toolbox
+  sandbox.py       Workspace, file and exec tools, workspace_factory
+  tool_loop.py     provider-agnostic tool-use loop, tool log
+  gates.py         command_gate, chain, with_gate
   gauntlet.py      inner loop
   stages.py        Stage, DEFAULT_STAGES, COMPACT_STAGES, LLM judge
   governor.py      Budget, Governor

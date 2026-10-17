@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lestinxor"
-version = "0.2.0"
+version = "0.3.0"
 description = "Lestinxor — grand orchestrator: evolutionary outer-loop thought search over gated inner-loop Gauntlet runs."
 readme = "README.md"
 license = { text = "MIT" }

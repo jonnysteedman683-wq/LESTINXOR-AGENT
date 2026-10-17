@@ -1,9 +1,13 @@
-"""Core data contracts. Pure data — no I/O, no clocks, no randomness."""
+"""Core data contracts. Pure data — no I/O, no clocks, no randomness (the toolbox is a handle, not state)."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .tools import Toolbox
 
 
 class Verdict(str, Enum):
@@ -37,6 +41,7 @@ class Context:
     artifacts: dict[str, str] = field(default_factory=dict)  # accepted output per stage
     feedback: dict[str, list[str]] = field(default_factory=dict)  # notes fed into the next attempt
     history: list[Attempt] = field(default_factory=list)  # every attempt, in order
+    tools: Toolbox | None = field(default=None, repr=False, compare=False)  # this run's toolbox, if any
 
     def add_feedback(self, stage: str, note: str) -> None:
         self.feedback.setdefault(stage, []).append(note)

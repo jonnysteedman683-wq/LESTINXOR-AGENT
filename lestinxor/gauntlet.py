@@ -9,6 +9,7 @@ from .governor import Governor
 from .help import HelpChannel, NoHelp
 from .llm import LLM
 from .stages import DEFAULT_STAGES, Stage
+from .tools import Toolbox
 from .trace import Trace
 
 
@@ -21,6 +22,7 @@ class Gauntlet:
         help: HelpChannel | None = None,
         trace: Trace | None = None,
         judge: LLM | None = None,
+        tools: Toolbox | None = None,
     ) -> None:
         names = [s.name for s in stages]
         if len(set(names)) != len(names):
@@ -29,6 +31,7 @@ class Gauntlet:
             raise ValueError("at least one stage is required")
         self.llm = llm
         self.judge = judge or llm
+        self.tools = tools
         self.stages = tuple(stages)
         self.names = names
         self.governor = governor or Governor()
@@ -36,7 +39,7 @@ class Gauntlet:
         self.trace = trace or Trace()
 
     def run(self, task: str) -> Result:
-        ctx = Context(task)
+        ctx = Context(task, tools=self.tools)
         iters = {n: 0 for n in self.names}
         i = 0
         self.trace.emit("start", task=task, stages=self.names)
@@ -49,7 +52,7 @@ class Gauntlet:
 
             iters[stage.name] += 1
             it = iters[stage.name]
-            output = stage.run(ctx, self.llm)
+            output = stage.run(ctx, self.llm, self.trace)
             gate = stage.evaluate(ctx, output, it, self.judge)
             gate = self.governor.review(gate, stage.name, it, self.names[:i])
 

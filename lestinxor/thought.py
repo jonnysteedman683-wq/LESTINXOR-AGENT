@@ -31,6 +31,7 @@ class Thought:
     status: str = "pending"  # pending | ok | failed
     inner_steps: int = 0
     reason: str = ""
+    workspace: str = ""  # artifact directory, when the run has tools
 
     @property
     def ok(self) -> bool:
