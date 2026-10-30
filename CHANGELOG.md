@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- `docs/SYSTEMS.md` describes how Jonny's agent systems link: who does what (owner, Jules, Claude, Grok), Sebastian vs Lestinxor rules, and the cross-test, fix-request, evolve and Gauntlet processes. The same file is in the Sebastian repo. Linked from `docs/BACKLOG.md` and the README.
+
 ## [0.3.0] — 2026-10-17
 
 ### Added
