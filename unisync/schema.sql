@@ -72,3 +72,16 @@ order by coalesce(body ->> 'scope', 'shared'), body ->> 'key', seq desc;
 alter table public.unisync_agents enable row level security;
 alter table public.unisync_events enable row level security;
 alter view public.unisync_memory set (security_invoker = true);
+
+-- Per-agent tokens for the gateway Edge Function (unisync/gateway/index.ts, deployed as `unisync`).
+-- Only sha256(token) is stored. Each token posts only as its agent and only the listed kinds.
+-- Revoke: update public.unisync_tokens set revoked_at = now() where agent = '<name>';
+create table if not exists public.unisync_tokens (
+    id          bigint generated always as identity primary key,
+    agent       text not null references public.unisync_agents (name),
+    token_hash  char(64) not null unique,
+    kinds       text[] not null,
+    created_at  timestamptz not null default now(),
+    revoked_at  timestamptz
+);
+alter table public.unisync_tokens enable row level security;
