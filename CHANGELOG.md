@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+- Covered sandbox refusal paths (L1).
+
 ### Added
 - **`SupabaseLedger`** (`lestinxor/unisync_supabase.py`): the UniSync ledger backed by the shared Supabase `unisync_events` table. Stdlib only; every row read is re-verified; concurrent writes resolve by re-sync, re-check and retry on 409. `Ledger.prepare`, `Ledger.append_record` and `Ledger.from_records` added to support it.
 - `docs/SYSTEMS.md` describes how Jonny's agent systems link: who does what (owner, Jules, Claude, Grok), Sebastian vs Lestinxor rules, and the cross-test, fix-request, evolve and Gauntlet processes. The same file is in the Sebastian repo. Linked from `docs/BACKLOG.md` and the README.
