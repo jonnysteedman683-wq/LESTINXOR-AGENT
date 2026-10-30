@@ -12,9 +12,11 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 10  # a hung job fails fast instead of running for 6 hours
     strategy:
       fail-fast: false
       matrix:
+        # Public repo: standard runners are free, so test every supported version.
         python: ["3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
