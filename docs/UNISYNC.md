@@ -86,8 +86,22 @@ assert ledger.verify() and ledger.status("L1") == "done"
 open("ledger.jsonl", "w").write(ledger.to_jsonl())
 ```
 
-## Next steps (not in this change)
+## Shared ledger in Supabase
 
-1. Apply `unisync/schema.sql` to a Supabase project (owner action).
-2. A thin `SupabaseLedger` adapter (stdlib `urllib`, PostgREST) that loads the tail, posts, and retries on a `prev` conflict.
-3. Sebastian and HERMES post `task.result` and `escalate` from their existing runs; Grok's reports become `escalate` entries instead of a separate channel.
+[`lestinxor/unisync_supabase.py`](../lestinxor/unisync_supabase.py) backs the same ledger with the
+`unisync_events` table (Supabase project **UNISYNCARC**). Stdlib only. Every row it reads is replayed
+through the rule checks, and a write that loses a race (409 on `seq`/`prev`) re-syncs, re-checks and retries.
+
+```python
+# env: UNISYNC_SUPABASE_URL=https://<ref>.supabase.co  UNISYNC_SUPABASE_KEY=<service-role key>
+from lestinxor.unisync import Kind
+from lestinxor.unisync_supabase import SupabaseLedger
+
+shared = SupabaseLedger()
+shared.post("sebastian", Kind.ESCALATE, reason="checks red on main")
+print(shared.pending_approvals(), shared.memory())
+```
+
+## Next steps
+
+1. Sebastian and HERMES post `task.result` and `escalate` from their existing runs; Grok's reports become `escalate` entries instead of a separate channel.

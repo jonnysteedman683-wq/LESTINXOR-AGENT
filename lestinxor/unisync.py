@@ -152,13 +152,17 @@ class Ledger:
 
     # ── posting ────────────────────────────────────────────────────────────
 
-    def post(self, sender: str, kind: Kind | str, task_id: str = "", **body: Any) -> Envelope:
+    def prepare(self, sender: str, kind: Kind | str, task_id: str = "", **body: Any) -> Envelope:
+        """Check and build the next envelope at the current head without appending it."""
         kind = Kind(kind)
         self._check(sender, kind, task_id, body)
         seq = len(self.entries)
         prev = self.head
         digest = envelope_digest(seq, sender, kind, task_id, body, prev)
-        env = Envelope(seq, sender, kind, task_id, dict(body), prev, digest, self.clock.now())
+        return Envelope(seq, sender, kind, task_id, dict(body), prev, digest, self.clock.now())
+
+    def post(self, sender: str, kind: Kind | str, task_id: str = "", **body: Any) -> Envelope:
+        env = self.prepare(sender, kind, task_id, **body)
         self.entries.append(env)
         return env
 
@@ -253,22 +257,29 @@ class Ledger:
     def to_jsonl(self) -> str:
         return "".join(json.dumps(e.to_dict(), sort_keys=True, default=str) + "\n" for e in self.entries)
 
+    def append_record(self, raw: Mapping[str, Any]) -> Envelope:
+        """Append an entry written elsewhere, re-checking every rule and the hash chain. Raises ProtocolError."""
+        if raw.get("v") != PROTOCOL_VERSION:
+            raise ProtocolError(f"unsupported protocol version {raw.get('v')!r}")
+        kind = Kind(raw["kind"])
+        self._check(raw["sender"], kind, raw["task_id"], raw["body"])
+        expect = envelope_digest(len(self.entries), raw["sender"], kind, raw["task_id"], raw["body"], self.head)
+        if raw["seq"] != len(self.entries) or raw["prev"] != self.head or raw["digest"] != expect:
+            raise ProtocolError(f"hash chain broken at seq {raw['seq']}")
+        env = Envelope(
+            raw["seq"], raw["sender"], kind, raw["task_id"], dict(raw["body"]), raw["prev"], expect, raw["ts"]
+        )
+        self.entries.append(env)
+        return env
+
     @classmethod
-    def from_jsonl(cls, text: str, agents: Iterable[AgentCard] = DEFAULT_AGENTS) -> Ledger:
+    def from_records(cls, records: Iterable[Mapping[str, Any]], agents: Iterable[AgentCard] = DEFAULT_AGENTS) -> Ledger:
         """Replay a ledger, re-checking every rule and the hash chain. Raises ProtocolError on tampering."""
         ledger = cls(agents)
-        for line in text.splitlines():
-            if not line.strip():
-                continue
-            raw = json.loads(line)
-            if raw.get("v") != PROTOCOL_VERSION:
-                raise ProtocolError(f"unsupported protocol version {raw.get('v')!r}")
-            kind = Kind(raw["kind"])
-            ledger._check(raw["sender"], kind, raw["task_id"], raw["body"])
-            expect = envelope_digest(len(ledger.entries), raw["sender"], kind, raw["task_id"], raw["body"], ledger.head)
-            if raw["seq"] != len(ledger.entries) or raw["prev"] != ledger.head or raw["digest"] != expect:
-                raise ProtocolError(f"hash chain broken at seq {raw['seq']}")
-            ledger.entries.append(
-                Envelope(raw["seq"], raw["sender"], kind, raw["task_id"], raw["body"], raw["prev"], expect, raw["ts"])
-            )
+        for raw in records:
+            ledger.append_record(raw)
         return ledger
+
+    @classmethod
+    def from_jsonl(cls, text: str, agents: Iterable[AgentCard] = DEFAULT_AGENTS) -> Ledger:
+        return cls.from_records((json.loads(line) for line in text.splitlines() if line.strip()), agents)
