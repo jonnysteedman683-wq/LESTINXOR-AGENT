@@ -46,7 +46,7 @@ create index if not exists unisync_events_task_idx on public.unisync_events (tas
 create index if not exists unisync_events_kind_idx on public.unisync_events (kind);
 
 create or replace function public.unisync_refuse_mutation() returns trigger
-language plpgsql as $$
+language plpgsql set search_path = '' as $$
 begin
     raise exception 'unisync_events is append-only';
 end;
