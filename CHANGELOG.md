@@ -5,6 +5,7 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [Unreleased]
 
 ### Added
+- **`SupabaseLedger`** (`lestinxor/unisync_supabase.py`): the UniSync ledger backed by the shared Supabase `unisync_events` table. Stdlib only; every row read is re-verified; concurrent writes resolve by re-sync, re-check and retry on 409. `Ledger.prepare`, `Ledger.append_record` and `Ledger.from_records` added to support it.
 - `docs/SYSTEMS.md` describes how Jonny's agent systems link: who does what (owner, Jules, Claude, Grok), Sebastian vs Lestinxor rules, and the cross-test, fix-request, evolve and Gauntlet processes. The same file is in the Sebastian repo. Linked from `docs/BACKLOG.md` and the README.
 - **UniSync joint protocol** (`lestinxor/unisync.py`, `docs/UNISYNC.md`, `unisync/schema.sql`): one append-only, hash-chained ledger every agent posts tasks, claims, results, memory writes, approvals and escalations to. Enforces role authority (only the owner decides approvals), the task lifecycle (single claimant, approval-gated tasks can't be claimed until approved), scoped last-write-wins shared memory, and tamper-evident JSONL replay. Includes a Supabase schema with append-only and no-fork guarantees.
 
