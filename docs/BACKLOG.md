@@ -1,6 +1,7 @@
 # Lestinxor backlog
 
 Agents take the first unchecked item that isn't marked 🔒 (see `AGENTS.md`).
+How this repo links to Jonny's other systems (Sebastian, cross-testing, fix requests, Grok, Claude): `docs/SYSTEMS.md`. It is context only; `AGENTS.md` wins on any conflict.
 
 ## Ready
 
