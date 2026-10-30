@@ -14,7 +14,7 @@ Any coding agent working in this repo (Jules, Claude, others) follows this file.
    ```
    Always use `python -m`. Never skip, xfail or delete a test, and never lower the 85% coverage gate, to get green.
 5. Tick the item in `docs/BACKLOG.md` and add a line under `## [Unreleased]` in `CHANGELOG.md`.
-6. Open a PR titled with a Conventional Commit. **In the body, paste the exact check output** (test count, coverage `TOTAL` line). GitHub Actions minutes are limited, so your pasted output is CI evidence.
+6. Open a PR titled with a Conventional Commit. **In the body, paste the exact check output** (test count, coverage `TOTAL` line). Reviewers read it alongside CI.
 7. Stop. One PR per run. Don't merge your own PR.
 
 ## Never
