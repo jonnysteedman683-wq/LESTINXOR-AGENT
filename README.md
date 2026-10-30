@@ -134,6 +134,7 @@ python -m pytest --cov=lestinxor        # tests, 85% coverage gate
 
 CI runs all three on Python 3.10–3.13. Agents follow `AGENTS.md` and paste this output into every PR.
 How Lestinxor fits with Jonny's other agents (Sebastian, cross-testing, fix requests): [`docs/SYSTEMS.md`](docs/SYSTEMS.md).
+The joint protocol all of them share (tasks, approvals, shared memory, hash-chained ledger): [`docs/UNISYNC.md`](docs/UNISYNC.md).
 
 ## Layout
 
