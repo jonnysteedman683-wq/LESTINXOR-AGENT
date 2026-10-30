@@ -132,7 +132,7 @@ mypy                                    # strict typing
 python -m pytest --cov=lestinxor        # tests, 85% coverage gate
 ```
 
-CI runs all three on Python 3.10–3.13.
+CI runs all three on Python 3.10 and 3.13 (oldest and newest supported). Agents follow `AGENTS.md` and paste this output into every PR.
 
 ## Layout
 
