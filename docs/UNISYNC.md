@@ -102,6 +102,22 @@ shared.post("sebastian", Kind.ESCALATE, reason="checks red on main")
 print(shared.pending_approvals(), shared.memory())
 ```
 
+## Per-agent tokens (gateway)
+
+Agents should not hold the service-role key. The `unisync` Edge Function
+([`unisync/gateway/index.ts`](../unisync/gateway/index.ts)) serves the same `GET`/`POST
+/rest/v1/unisync_events` API, so clients only change two values:
+
+```
+UNISYNC_SUPABASE_URL=https://dcjqwnapxgocitvntzzm.supabase.co/functions/v1/unisync
+UNISYNC_SUPABASE_KEY=<that agent's token>
+```
+
+The gateway refuses a post unless the token's agent is the `sender`, the `kind` is in that token's
+allowed list, the digest matches the canonical envelope (byte-identical to Python's), and the post
+sits on the current head (409 otherwise). Only `sha256(token)` is stored, in `unisync_tokens`.
+Verified live: impersonation (403), forbidden kind (403), forged digest (400), bad token (401).
+
 ## Next steps
 
 1. Sebastian and HERMES post `task.result` and `escalate` from their existing runs; Grok's reports become `escalate` entries instead of a separate channel.
