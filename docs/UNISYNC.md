@@ -39,6 +39,10 @@ Every entry is one JSON object (one line in JSONL, one row in `unisync_events`):
 | `escalate` | `reason` | anyone |
 | `heartbeat` | | anyone |
 
+Registered agents: `jonny` (owner); `lestinxor` and `o0` (orchestrators); `sebastian`, `jules`,
+`claude` and `hermes` (workers); `grok` and `coordinator-bot` (watchers). An orchestrator such as O0
+can request work and set `requires_approval: true`, but only the owner can approve it.
+
 ## Task lifecycle
 
 ```

@@ -61,6 +61,7 @@ DEFAULT_AGENTS: tuple[AgentCard, ...] = (
     AgentCard("jules", Role.WORKER),
     AgentCard("claude", Role.WORKER),
     AgentCard("hermes", Role.WORKER),
+    AgentCard("o0", Role.ORCHESTRATOR, ("jonnysteedman683-wq/O0",)),
     AgentCard("grok", Role.WATCHER, ("jonnysteedman683-wq/Sebastian",)),
     AgentCard("coordinator-bot", Role.WATCHER),
 )
