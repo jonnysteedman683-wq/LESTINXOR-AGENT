@@ -45,6 +45,8 @@ ignore = ["RUF001", "RUF002", "RUF003", "UP007"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["B", "SIM", "E731", "E741"]
+# Vendored byte-identical from Sebastian; its noqa targets py311 rules that never fire on py310.
+"lestinxor/gauntlet_core.py" = ["RUF100"]
 
 [tool.mypy]
 python_version = "3.10"
