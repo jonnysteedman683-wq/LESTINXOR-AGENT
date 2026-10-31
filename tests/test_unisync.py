@@ -233,5 +233,36 @@ class TestChain(unittest.TestCase):
         self.assertEqual(lg.entries[1].to_dict()["kind"], "task.claim")
 
 
+class TestO0Registered(unittest.TestCase):
+    """O0 joins as an orchestrator: it may dispatch work, but only Jonny approves it."""
+
+    def test_o0_dispatches_and_reports(self):
+        lg = ledger()
+        lg.post("o0", Kind.HEARTBEAT)
+        lg.post("o0", Kind.MEMORY_WRITE, key="flywheel", value={"iteration": 1}, scope="o0")
+        lg.post("o0", Kind.TASK_REQUEST, "o0-1", title="audit tasks.py", requires_approval=True)
+        self.assertEqual(lg.status("o0-1"), "awaiting_approval")
+        self.assertEqual(lg.memory("o0"), {"flywheel": {"iteration": 1}})
+
+    def test_o0_cannot_approve_its_own_dispatch(self):
+        lg = ledger()
+        lg.post("o0", Kind.TASK_REQUEST, "o0-2", title="x", requires_approval=True)
+        with self.assertRaises(ProtocolError):
+            lg.post("o0", Kind.APPROVAL_DECISION, "o0-2", approved=True)
+        lg.post("jonny", Kind.APPROVAL_DECISION, "o0-2", approved=True)
+        self.assertEqual(lg.status("o0-2"), "approved")
+
+    def test_ledgers_with_o0_entries_replay(self):
+        lg = ledger()
+        lg.post("o0", Kind.HEARTBEAT)
+        self.assertTrue(Ledger.from_jsonl(lg.to_jsonl()).verify())
+
+    def test_schema_seeds_o0(self):
+        from pathlib import Path
+
+        sql = (Path(__file__).resolve().parents[1] / "unisync" / "schema.sql").read_text()
+        self.assertIn("('o0',              'orchestrator', '{jonnysteedman683-wq/O0}')", sql)
+
+
 if __name__ == "__main__":
     unittest.main()

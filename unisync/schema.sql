@@ -23,6 +23,7 @@ insert into public.unisync_agents (name, role, repos) values
     ('jules',           'worker',       '{}'),
     ('claude',          'worker',       '{}'),
     ('hermes',          'worker',       '{}'),
+    ('o0',              'orchestrator', '{jonnysteedman683-wq/O0}'),
     ('grok',            'watcher',      '{jonnysteedman683-wq/Sebastian}'),
     ('coordinator-bot', 'watcher',      '{}')
 on conflict (name) do nothing;
