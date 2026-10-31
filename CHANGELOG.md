@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+- Covered sandbox refusal paths (L1).
+
 ### Added
 - **UniSync gateway** (`unisync/gateway/index.ts`, deployed as the `unisync` Edge Function): per-agent tokens in front of the ledger with the same API, so agents never hold the service-role key. Enforces sender = token's agent, allowed kinds, canonical digest and current head. `unisync_tokens` table added to `unisync/schema.sql`.
 - **`SupabaseLedger`** (`lestinxor/unisync_supabase.py`): the UniSync ledger backed by the shared Supabase `unisync_events` table. Stdlib only; every row read is re-verified; concurrent writes resolve by re-sync, re-check and retry on 409. `Ledger.prepare`, `Ledger.append_record` and `Ledger.from_records` added to support it.

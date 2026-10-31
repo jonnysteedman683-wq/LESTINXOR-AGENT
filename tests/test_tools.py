@@ -131,6 +131,24 @@ class SandboxTests(unittest.TestCase):
         self.assertEqual(self.box.call("read_file", {"path": "pkg/a.py"}).output, "X = 1\n")
         self.assertEqual(self.box.call("list_files", {}).output, "pkg/a.py")
 
+    def test_fs_tools_file_size_limits(self):
+        from lestinxor.sandbox import Workspace, fs_tools
+
+        ws = Workspace(self.root / "ws")
+        tools = fs_tools(ws, max_file_bytes=10)
+        write_file = next(t.fn for t in tools if t.name == "write_file")
+        read_file = next(t.fn for t in tools if t.name == "read_file")
+        with self.assertRaises(ValueError) as exc:
+            write_file("big.txt", "12345678901")
+        self.assertIn("content exceeds 10 bytes", str(exc.exception))
+
+        write_file("ok.txt", "1234")
+        with open(ws.resolve("ok.txt"), "a") as f:
+            f.write("5678901")
+        with self.assertRaises(ValueError) as exc2:
+            read_file("ok.txt")
+        self.assertIn("file exceeds 10 bytes", str(exc2.exception))
+
     def test_path_escapes_refused(self):
         (self.root / "outside.txt").write_text("secret")
         os.symlink(self.root / "outside.txt", self.root / "ws" / "link.txt")
@@ -182,6 +200,45 @@ class SandboxTests(unittest.TestCase):
         r = box.call("run_python", {"code": "import time; time.sleep(30)"})
         self.assertFalse(r.ok)
         self.assertIn("timed out", r.error)
+
+    def test_kill_tree_exceptions(self):
+        import subprocess
+
+        from lestinxor.sandbox import _kill_tree
+
+        proc = mock.Mock(spec=subprocess.Popen)
+        proc.pid = 12345
+        proc.kill.side_effect = PermissionError("mock perm error")
+
+        with mock.patch("os.name", "nt"):
+            _kill_tree(proc)
+            proc.kill.assert_called_once()
+
+        with mock.patch("os.name", "posix"):
+            with mock.patch("os.killpg", side_effect=ProcessLookupError("mock lookup error")) as killpg_mock:
+                _kill_tree(proc)
+                killpg_mock.assert_called_once()
+
+    def test_run_sandboxed_oserror(self):
+        from lestinxor.sandbox import Workspace, run_sandboxed
+
+        ws = Workspace(self.root / "ws4")
+        with mock.patch("subprocess.Popen", side_effect=OSError("mock os error")):
+            r = run_sandboxed(["python", "-c", "print(1)"], ws)
+            self.assertFalse(r.ok)
+            self.assertIn("OSError: mock os error", r.error)
+
+    def test_allow_command_not_found(self):
+        from lestinxor.sandbox import allow_command
+
+        with self.assertRaises(FileNotFoundError) as exc:
+            allow_command("this-cmd-does-not-exist-12345")
+        self.assertIn("not found on PATH", str(exc.exception))
+
+        # Test finding python
+        res = allow_command("python")
+        self.assertTrue(len(res) == 1)
+        self.assertTrue(res[0].endswith("python") or res[0].endswith("python.exe") or res[0].endswith("python3"))
 
     def test_workspace_factory_forks_parent(self):
         make = workspace_factory(self.root / "runs")
