@@ -14,6 +14,8 @@ How this repo links to Jonny's other systems (Sebastian, cross-testing, fix requ
 
 ## 🔒 Owner decision
 
+- [x] **L5: Vendor the shared Gauntlet core.** Byte-identical copy of Sebastian's stdlib-only `gauntlet_core.py` (CORE_VERSION 1.0.0, SHA-256 pinned in both repos). Not wired into the inner loop yet; that is the next step and unblocks L4.
+
 - [ ] 🔒 **L4: Command-checked TEST stage.** Sebastian's Gauntlet runs PREDICT-ed check commands in VERIFY. Lestinxor's `test` stage is judged by an LLM. Running checks through `sandbox.py` would close that gap, but it changes the inner loop's contract and touches the safety boundary.
 
 ## Proposed

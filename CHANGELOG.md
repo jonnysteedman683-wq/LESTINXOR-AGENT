@@ -3,6 +3,7 @@
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+- feat: vendored shared Gauntlet core (L5). `lestinxor/gauntlet_core.py` is a byte-identical copy of Sebastian's `src/sebastian/gauntlet_core.py` (`CORE_VERSION = "1.0.0"`): the `Stage` machine, `next_stage`, and the strict `<checks>` and `VERDICT:` parsers. `tests/test_gauntlet_core.py` pins its SHA-256 to the same value as Sebastian, so any drift fails CI in both repos. Not wired into the inner loop yet.
 
 - Covered sandbox refusal paths (L1).
 
