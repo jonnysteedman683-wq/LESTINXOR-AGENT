@@ -3,6 +3,7 @@
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+- Added a smoke test for `python -m lestinxor` (L3).
 - feat: register `horizontal` and `neurocore` (workers) and `vortex` (watcher) on UniSync in `DEFAULT_AGENTS` and the `unisync_agents` seed, so every LinX system with a role can post (LinX X2). Vortex can relay and escalate but never claim, dispatch or approve.
 - Covered convergence and help edge cases (L2).
 - feat: register O0 on UniSync as an orchestrator (`jonnysteedman683-wq/O0`) in `DEFAULT_AGENTS` and the `unisync_agents` seed in `unisync/schema.sql`, so ledgers containing O0's posts replay. O0 may request work but, like every non-owner, can never post `approval.decision`.
