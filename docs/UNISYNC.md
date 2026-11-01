@@ -40,8 +40,11 @@ Every entry is one JSON object (one line in JSONL, one row in `unisync_events`):
 | `heartbeat` | | anyone |
 
 Registered agents: `jonny` (owner); `lestinxor` and `o0` (orchestrators); `sebastian`, `jules`,
-`claude` and `hermes` (workers); `grok` and `coordinator-bot` (watchers). An orchestrator such as O0
-can request work and set `requires_approval: true`, but only the owner can approve it.
+`claude`, `hermes`, `horizontal` and `neurocore` (workers); `grok`, `coordinator-bot` and `vortex`
+(watchers). An orchestrator such as O0 can request work and set `requires_approval: true`, but only
+the owner can approve it. Vortex is a watcher because it relays its MCP task events onto the ledger:
+it can report, escalate and ask for approval, but never claims or dispatches work. The full map of
+systems lives in [LinX](https://github.com/jonnysteedman683-wq/LinX).
 
 ## Task lifecycle
 

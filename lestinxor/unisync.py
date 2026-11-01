@@ -61,9 +61,12 @@ DEFAULT_AGENTS: tuple[AgentCard, ...] = (
     AgentCard("jules", Role.WORKER),
     AgentCard("claude", Role.WORKER),
     AgentCard("hermes", Role.WORKER),
+    AgentCard("horizontal", Role.WORKER, ("jonnysteedman683-wq/HORIZONTAL",)),
+    AgentCard("neurocore", Role.WORKER, ("jonnysteedman683-wq/neurocore",)),
     AgentCard("o0", Role.ORCHESTRATOR, ("jonnysteedman683-wq/O0",)),
     AgentCard("grok", Role.WATCHER, ("jonnysteedman683-wq/Sebastian",)),
     AgentCard("coordinator-bot", Role.WATCHER),
+    AgentCard("vortex", Role.WATCHER, ("jonnysteedman683-wq/Vortex-MCP",)),
 )
 
 _ALL = frozenset(Role)

@@ -5,6 +5,7 @@ import unittest
 
 from lestinxor import ManualClock
 from lestinxor.unisync import (
+    DEFAULT_AGENTS,
     GENESIS,
     AgentCard,
     Kind,
@@ -262,6 +263,54 @@ class TestO0Registered(unittest.TestCase):
 
         sql = (Path(__file__).resolve().parents[1] / "unisync" / "schema.sql").read_text()
         self.assertIn("('o0',              'orchestrator', '{jonnysteedman683-wq/O0}')", sql)
+
+
+class TestLinXSystemsRegistered(unittest.TestCase):
+    """HORIZONTAL and neurocore join as workers, Vortex as a watcher (LinX X2)."""
+
+    def test_roles(self):
+        roles = {card.name: card.role for card in DEFAULT_AGENTS}
+        self.assertEqual(roles["horizontal"], Role.WORKER)
+        self.assertEqual(roles["neurocore"], Role.WORKER)
+        self.assertEqual(roles["vortex"], Role.WATCHER)
+
+    def test_workers_claim_and_report(self):
+        lg = ledger()
+        lg.post("jonny", Kind.TASK_REQUEST, "h-1", title="evolve tool")
+        lg.post("horizontal", Kind.TASK_CLAIM, "h-1")
+        lg.post("horizontal", Kind.TASK_RESULT, "h-1", summary="crowned")
+        self.assertEqual(lg.status("h-1"), "done")
+        lg.post("jonny", Kind.TASK_REQUEST, "n-1", title="decode intent")
+        lg.post("neurocore", Kind.TASK_CLAIM, "n-1")
+        self.assertEqual(lg.claimant("n-1"), "neurocore")
+
+    def test_vortex_relays_but_never_executes_or_dispatches(self):
+        lg = ledger()
+        lg.post("vortex", Kind.HEARTBEAT)
+        lg.post("jonny", Kind.TASK_REQUEST, "v-1", title="x")
+        lg.post("vortex", Kind.APPROVAL_REQUEST, "v-1", action="relay vortex task")
+        for kind, body in ((Kind.TASK_CLAIM, {}), (Kind.TASK_REQUEST, {"title": "y"})):
+            with self.assertRaises(ProtocolError):
+                lg.post("vortex", kind, "v-1", **body)
+
+    def test_none_can_approve(self):
+        lg = ledger()
+        lg.post("jonny", Kind.TASK_REQUEST, "a-1", title="x", requires_approval=True)
+        for name in ("horizontal", "neurocore", "vortex"):
+            with self.assertRaises(ProtocolError):
+                lg.post(name, Kind.APPROVAL_DECISION, "a-1", approved=True)
+
+    def test_ledgers_replay_and_schema_seeds_them(self):
+        from pathlib import Path
+
+        lg = ledger()
+        for name in ("horizontal", "neurocore", "vortex"):
+            lg.post(name, Kind.HEARTBEAT)
+        self.assertTrue(Ledger.from_jsonl(lg.to_jsonl()).verify())
+        sql = (Path(__file__).resolve().parents[1] / "unisync" / "schema.sql").read_text()
+        self.assertIn("('horizontal',      'worker',       '{jonnysteedman683-wq/HORIZONTAL}')", sql)
+        self.assertIn("('neurocore',       'worker',       '{jonnysteedman683-wq/neurocore}')", sql)
+        self.assertIn("('vortex',          'watcher',      '{jonnysteedman683-wq/Vortex-MCP}')", sql)
 
 
 if __name__ == "__main__":
