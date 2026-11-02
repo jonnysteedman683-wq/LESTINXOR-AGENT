@@ -12,6 +12,8 @@ How this repo links to Jonny's other systems (Sebastian, cross-testing, fix requ
 - [x] **L3: `python -m lestinxor` smoke test.** `lestinxor/__main__.py` has 0% coverage.
   *Done when:* a test runs `python -m lestinxor --help` in a subprocess and asserts exit code 0 and that the usage text names both `orchestrate` and `gauntlet`.
 
+- [x] **L6: Owner signatures.** Owner-role entries (approvals, halts) are checked by name only, so anyone who can write rows can post as the owner. Add stdlib hash-based signatures and enforce them in `Ledger` when an owner key is configured. *Done when* unsigned/forged/reused owner entries are refused on post and replay, with tests.
+
 ## 🔒 Owner decision
 
 - [x] **L5: Vendor the shared Gauntlet core.** Byte-identical copy of Sebastian's stdlib-only `gauntlet_core.py` (CORE_VERSION 1.0.0, SHA-256 pinned in both repos). Not wired into the inner loop yet; that is the next step and unblocks L4.

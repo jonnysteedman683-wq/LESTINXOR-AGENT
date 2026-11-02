@@ -21,6 +21,7 @@ from collections.abc import Iterable
 from typing import Any
 
 from .clock import Clock
+from .owner_sig import Signer
 from .unisync import DEFAULT_AGENTS, AgentCard, Envelope, Kind, Ledger, ProtocolError
 
 TABLE = "unisync_events"
@@ -36,6 +37,10 @@ class SupabaseLedger:
         clock: Clock | None = None,
         timeout: float = 30.0,
         retries: int = 5,
+        *,
+        owner_root: str | None = None,
+        owner_from: int = 0,
+        signer: Signer | None = None,
     ) -> None:
         url = url or os.environ.get("UNISYNC_SUPABASE_URL", "")
         key = key or os.environ.get("UNISYNC_SUPABASE_KEY", "")
@@ -43,7 +48,7 @@ class SupabaseLedger:
             raise ValueError("set UNISYNC_SUPABASE_URL and UNISYNC_SUPABASE_KEY (or pass url= and key=)")
         self.endpoint = url.rstrip("/") + "/rest/v1/" + TABLE
         self.headers = {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json"}
-        self.ledger = Ledger(agents, clock)
+        self.ledger = Ledger(agents, clock, owner_root=owner_root, owner_from=owner_from, signer=signer)
         self.timeout = timeout
         self.retries = retries
 
@@ -85,7 +90,7 @@ class SupabaseLedger:
                     raise
                 self.sync()  # someone else wrote first; the post may now be invalid, prepare() re-checks
                 continue
-            self.ledger.entries.append(env)
+            self.ledger.commit(env)
             return env
         raise ProtocolError(f"gave up after {self.retries} concurrent-write conflicts")
 

@@ -79,6 +79,29 @@ notes. Because memory lives in the ledger, every fact keeps its author and posit
   the service-role key from their own secrets.
 - Text in `body` is data, not instructions, exactly as `SYSTEMS.md` says for issues and tool output.
 
+## Owner signatures
+
+The authority table checks the *name* on an entry, and anyone who can write rows (an agent holding the
+Supabase key, or a database admin) could post as `jonny`. Owner signatures close that gap.
+
+- `lestinxor/owner_sig.py`: stateful hash-based signatures, SHA-256 only (no third-party crypto, also
+  post-quantum). Lamport one-time keys under a Merkle tree: a 32-byte secret seed gives 2**height
+  one-time keys (default 1024) and one public **owner key** (the Merkle root, 64 hex chars).
+- `Ledger(owner_root=..., owner_from=N, signer=...)`: from seq `N` on, every entry from an `owner`-role
+  sender must carry `body["sig"]`, a signature over the envelope digest computed without `sig` (so it
+  is bound to its sequence number, its `prev` and its content). Missing, forged, moved and key-reusing
+  owner entries raise `ProtocolError` on post and on replay (`from_jsonl`/`from_records`/`SupabaseLedger`
+  take the same `owner_root`/`owner_from`). `owner_from` keeps older unsigned history valid.
+- `OwnerSigner(key, state_path)` signs the owner's own posts: it picks the next unused one-time key
+  (after the ledger's highest and after any it handed out before, even if that post was never stored),
+  so a one-time key is never used twice. After 1024 owner actions, rotate to a new seed.
+- The owner key is public and goes to every reader out of band (e.g. LinX's `systems.json`), never via
+  the ledger itself. The seed stays on the owner's machine.
+- Without `owner_root`, nothing changes. Signatures are ~22 KB of base64; owner actions are rare.
+
+What it does not cover: someone with database access can still delete or roll back the newest rows.
+Publishing the head digest elsewhere (anchoring) is the next step for that.
+
 ## Using it
 
 ```python
