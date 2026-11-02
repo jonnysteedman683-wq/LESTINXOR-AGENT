@@ -3,6 +3,7 @@
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+- feat: owner signatures (L6). `lestinxor/owner_sig.py` adds stdlib-only hash-based signatures (Lamport + Merkle tree); `Ledger(owner_root=, owner_from=, signer=)` refuses unsigned, forged, moved or key-reusing owner entries on post and replay; `SupabaseLedger` passes them through; new `Ledger.commit`. Off unless `owner_root` is set.
 - Added a smoke test for `python -m lestinxor` (L3).
 - feat: register `horizontal` and `neurocore` (workers) and `vortex` (watcher) on UniSync in `DEFAULT_AGENTS` and the `unisync_agents` seed, so every LinX system with a role can post (LinX X2). Vortex can relay and escalate but never claim, dispatch or approve.
 - Covered convergence and help edge cases (L2).

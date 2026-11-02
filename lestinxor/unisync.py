@@ -19,6 +19,7 @@ from enum import Enum
 from typing import Any
 
 from .clock import Clock, SystemClock
+from .owner_sig import OwnerSigError, Signer, sig_index, verify
 
 PROTOCOL_VERSION = "unisync/1"
 GENESIS = "0" * 64
@@ -143,12 +144,57 @@ def envelope_digest(seq: int, sender: str, kind: Kind, task_id: str, body: Mappi
 
 
 class Ledger:
-    """Append-only, hash-chained log of envelopes with authority and lifecycle checks."""
+    """Append-only, hash-chained log of envelopes with authority and lifecycle checks.
 
-    def __init__(self, agents: Iterable[AgentCard] = DEFAULT_AGENTS, clock: Clock | None = None) -> None:
+    Owner signatures (optional): with `owner_root` set, every entry from an OWNER-role sender at
+    `seq >= owner_from` must carry `body["sig"]`, an `owner_sig` signature over the envelope digest
+    computed without `sig`. Forged, missing and key-reusing owner entries are refused on post and on
+    replay. A `signer` signs the owner's own posts. Without `owner_root` nothing changes.
+    """
+
+    def __init__(
+        self,
+        agents: Iterable[AgentCard] = DEFAULT_AGENTS,
+        clock: Clock | None = None,
+        *,
+        owner_root: str | None = None,
+        owner_from: int = 0,
+        signer: Signer | None = None,
+    ) -> None:
         self.agents: dict[str, AgentCard] = {a.name: a for a in agents}
         self.clock: Clock = clock or SystemClock()
         self.entries: list[Envelope] = []
+        self.owner_root = owner_root
+        self.owner_from = owner_from
+        self.signer = signer
+        self._owner_used: dict[int, str] = {}  # leaf index -> unsigned digest it signed
+
+    def _owner_signed(self, sender: str) -> bool:
+        card = self.agents.get(sender)
+        return (
+            bool(self.owner_root)
+            and card is not None
+            and card.role is Role.OWNER
+            and (len(self.entries) >= self.owner_from)
+        )
+
+    def max_owner_index(self) -> int:
+        return max(self._owner_used, default=-1)
+
+    def _unsigned_digest(self, sender: str, kind: Kind, task_id: str, body: Mapping[str, Any]) -> str:
+        rest = {k: v for k, v in body.items() if k != "sig"}
+        return envelope_digest(len(self.entries), sender, kind, task_id, rest, self.head)
+
+    def _remember(self, env: Envelope) -> None:
+        sig = env.body.get("sig")
+        if isinstance(sig, str) and self._owner_signed_at(env):
+            self._owner_used[sig_index(sig)] = envelope_digest(
+                env.seq, env.sender, env.kind, env.task_id, {k: v for k, v in env.body.items() if k != "sig"}, env.prev
+            )
+
+    def _owner_signed_at(self, env: Envelope) -> bool:
+        card = self.agents.get(env.sender)
+        return bool(self.owner_root) and card is not None and card.role is Role.OWNER and env.seq >= self.owner_from
 
     @property
     def head(self) -> str:
@@ -159,6 +205,9 @@ class Ledger:
     def prepare(self, sender: str, kind: Kind | str, task_id: str = "", **body: Any) -> Envelope:
         """Check and build the next envelope at the current head without appending it."""
         kind = Kind(kind)
+        if self.signer is not None and self._owner_signed(sender):
+            unsigned = self._unsigned_digest(sender, kind, task_id, body)
+            body = {**body, "sig": self.signer(bytes.fromhex(unsigned), self.max_owner_index())}
         self._check(sender, kind, task_id, body)
         seq = len(self.entries)
         prev = self.head
@@ -166,8 +215,14 @@ class Ledger:
         return Envelope(seq, sender, kind, task_id, dict(body), prev, digest, self.clock.now())
 
     def post(self, sender: str, kind: Kind | str, task_id: str = "", **body: Any) -> Envelope:
-        env = self.prepare(sender, kind, task_id, **body)
+        return self.commit(self.prepare(sender, kind, task_id, **body))
+
+    def commit(self, env: Envelope) -> Envelope:
+        """Append an envelope made by `prepare` at the current head (and record any owner key use)."""
+        if env.seq != len(self.entries) or env.prev != self.head:
+            raise ProtocolError(f"envelope {env.seq} was prepared at another head")
         self.entries.append(env)
+        self._remember(env)
         return env
 
     def _check(self, sender: str, kind: Kind, task_id: str, body: Mapping[str, Any]) -> None:
@@ -181,6 +236,17 @@ class Ledger:
             raise ProtocolError(f"{kind.value} missing body field(s): {', '.join(missing)}")
         if kind in _NEEDS_TASK and not task_id:
             raise ProtocolError(f"{kind.value} needs a task_id")
+        if self._owner_signed(sender):
+            sig = body.get("sig")
+            if not isinstance(sig, str):
+                raise ProtocolError(f"{sender} entries must be signed with the owner key (no 'sig')")
+            unsigned = self._unsigned_digest(sender, kind, task_id, body)
+            try:
+                index = verify(bytes.fromhex(unsigned), sig, str(self.owner_root))
+            except OwnerSigError as exc:
+                raise ProtocolError(f"owner signature rejected: {exc}") from exc
+            if self._owner_used.get(index, unsigned) != unsigned:
+                raise ProtocolError(f"owner key index {index} reused for a different entry")
 
         status = self.status(task_id) if task_id else ""
         if kind is Kind.TASK_REQUEST and status:
@@ -274,16 +340,32 @@ class Ledger:
             raw["seq"], raw["sender"], kind, raw["task_id"], dict(raw["body"]), raw["prev"], expect, raw["ts"]
         )
         self.entries.append(env)
+        self._remember(env)
         return env
 
     @classmethod
-    def from_records(cls, records: Iterable[Mapping[str, Any]], agents: Iterable[AgentCard] = DEFAULT_AGENTS) -> Ledger:
+    def from_records(
+        cls,
+        records: Iterable[Mapping[str, Any]],
+        agents: Iterable[AgentCard] = DEFAULT_AGENTS,
+        *,
+        owner_root: str | None = None,
+        owner_from: int = 0,
+    ) -> Ledger:
         """Replay a ledger, re-checking every rule and the hash chain. Raises ProtocolError on tampering."""
-        ledger = cls(agents)
+        ledger = cls(agents, owner_root=owner_root, owner_from=owner_from)
         for raw in records:
             ledger.append_record(raw)
         return ledger
 
     @classmethod
-    def from_jsonl(cls, text: str, agents: Iterable[AgentCard] = DEFAULT_AGENTS) -> Ledger:
-        return cls.from_records((json.loads(line) for line in text.splitlines() if line.strip()), agents)
+    def from_jsonl(
+        cls,
+        text: str,
+        agents: Iterable[AgentCard] = DEFAULT_AGENTS,
+        *,
+        owner_root: str | None = None,
+        owner_from: int = 0,
+    ) -> Ledger:
+        records = (json.loads(line) for line in text.splitlines() if line.strip())
+        return cls.from_records(records, agents, owner_root=owner_root, owner_from=owner_from)
