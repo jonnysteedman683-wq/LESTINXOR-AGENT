@@ -143,6 +143,31 @@ def envelope_digest(seq: int, sender: str, kind: Kind, task_id: str, body: Mappi
     return hashlib.sha256(_canonical(payload)).hexdigest()
 
 
+_FIELDS: dict[str, type | tuple[type, ...]] = {
+    "v": str,
+    "seq": int,
+    "sender": str,
+    "kind": str,
+    "task_id": str,
+    "body": Mapping,
+    "prev": str,
+    "digest": str,
+    "ts": (int, float),
+}
+
+
+def _check_shape(raw: Any) -> None:
+    """A replayed row must be an object with every field of the right type, or it is refused cleanly."""
+    if not isinstance(raw, Mapping):
+        raise ProtocolError(f"a ledger row must be an object, not {type(raw).__name__}")
+    for name, kind in _FIELDS.items():
+        value = raw.get(name)
+        if value is None or isinstance(value, bool) or not isinstance(value, kind):
+            raise ProtocolError(f"ledger row field {name!r} is missing or malformed: {value!r:.60}")
+    if raw["kind"] not in {k.value for k in Kind}:
+        raise ProtocolError(f"unknown kind {raw['kind']!r:.60}")
+
+
 class Ledger:
     """Append-only, hash-chained log of envelopes with authority and lifecycle checks.
 
@@ -329,6 +354,7 @@ class Ledger:
 
     def append_record(self, raw: Mapping[str, Any]) -> Envelope:
         """Append an entry written elsewhere, re-checking every rule and the hash chain. Raises ProtocolError."""
+        _check_shape(raw)
         if raw.get("v") != PROTOCOL_VERSION:
             raise ProtocolError(f"unsupported protocol version {raw.get('v')!r}")
         kind = Kind(raw["kind"])
@@ -367,5 +393,12 @@ class Ledger:
         owner_root: str | None = None,
         owner_from: int = 0,
     ) -> Ledger:
-        records = (json.loads(line) for line in text.splitlines() if line.strip())
-        return cls.from_records(records, agents, owner_root=owner_root, owner_from=owner_from)
+        def records() -> Iterable[Any]:
+            for n, line in enumerate(text.splitlines(), 1):
+                if line.strip():
+                    try:
+                        yield json.loads(line)
+                    except ValueError as exc:
+                        raise ProtocolError(f"line {n} is not JSON: {exc}") from exc
+
+        return cls.from_records(records(), agents, owner_root=owner_root, owner_from=owner_from)

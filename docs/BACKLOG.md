@@ -14,6 +14,8 @@ How this repo links to Jonny's other systems (Sebastian, cross-testing, fix requ
 
 - [x] **L6: Owner signatures.** Owner-role entries (approvals, halts) are checked by name only, so anyone who can write rows can post as the owner. Add stdlib hash-based signatures and enforce them in `Ledger` when an owner key is configured. *Done when* unsigned/forged/reused owner entries are refused on post and replay, with tests.
 
+- [x] **L10: Malformed ledger rows are refused cleanly.** Found by fuzzing (LinX hardening 7): replaying a row with a missing or wrongly typed field, a non-object line or broken JSON crashed with KeyError/TypeError/AttributeError instead of ProtocolError. *Done when* every damaged history raises ProtocolError and anything accepted is a true prefix (seeded fuzz tests, signed and unsigned).
+
 ## 🔒 Owner decision
 
 - [x] **L5: Vendor the shared Gauntlet core.** Byte-identical copy of Sebastian's stdlib-only `gauntlet_core.py` (CORE_VERSION 1.0.0, SHA-256 pinned in both repos). Not wired into the inner loop yet; that is the next step and unblocks L4.
