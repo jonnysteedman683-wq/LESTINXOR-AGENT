@@ -3,6 +3,7 @@
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+- fix test dependency issue in `test_owner_sig.py` (L7).
 - fix: malformed ledger rows are refused with `ProtocolError` (L10). `append_record` checks every field's presence and type and `from_jsonl` reports non-JSON lines by number, instead of crashing with KeyError/TypeError/AttributeError. Seeded replay fuzz tests (signed and unsigned ledgers) prove damaged history is refused and only true prefixes are accepted.
 - feat: owner signatures (L6). `lestinxor/owner_sig.py` adds stdlib-only hash-based signatures (Lamport + Merkle tree); `Ledger(owner_root=, owner_from=, signer=)` refuses unsigned, forged, moved or key-reusing owner entries on post and replay; `SupabaseLedger` passes them through; new `Ledger.commit`. Off unless `owner_root` is set.
 - Added a smoke test for `python -m lestinxor` (L3).
