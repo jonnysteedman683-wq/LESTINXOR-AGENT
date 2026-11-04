@@ -25,7 +25,7 @@ How this repo links to Jonny's other systems (Sebastian, cross-testing, fix requ
 ## Proposed
 
 (Agents add up to 3 items here when Ready is empty.)
-- [ ] **L7: Fix test dependency issue in `test_owner_sig.py`.** The test file `tests/test_owner_sig.py` currently attempts to import `FakeRest` and `URL` from `tests.test_unisync_supabase`. The codebase test coverage command `python -m pytest --cov=lestinxor` fails due to `ModuleNotFoundError: No module named 'tests'`.
+- [x] **L7: Fix test dependency issue in `test_owner_sig.py`.** The test file `tests/test_owner_sig.py` currently attempts to import `FakeRest` and `URL` from `tests.test_unisync_supabase`. The codebase test coverage command `python -m pytest --cov=lestinxor` fails due to `ModuleNotFoundError: No module named 'tests'`.
   *Done when:* The import path in `test_owner_sig.py` is updated to correctly resolve the test dependency, and running `python -m pytest --cov=lestinxor` passes without failure.
 
 - [ ] **L8: Improve test coverage for `lestinxor/cli.py`.** The current coverage for `cli.py` has several missing lines. Add tests to cover argument parsing edge cases and command routing logic to increase coverage.

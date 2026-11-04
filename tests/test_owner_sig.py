@@ -169,8 +169,9 @@ class TestLedgerEnforcement(unittest.TestCase):
 
 class TestSupabaseSigned(unittest.TestCase):
     def test_signed_post_round_trips_through_supabase(self):
+        from test_unisync_supabase import URL, FakeRest
+
         from lestinxor.unisync_supabase import SupabaseLedger
-        from tests.test_unisync_supabase import URL, FakeRest
 
         fake = FakeRest()
         with mock.patch("urllib.request.urlopen", fake):
