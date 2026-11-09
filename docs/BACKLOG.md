@@ -31,5 +31,5 @@ How this repo links to Jonny's other systems (Sebastian, cross-testing, fix requ
 - [x] **L8: Improve test coverage for `lestinxor/cli.py`.** The current coverage for `cli.py` has several missing lines. Add tests to cover argument parsing edge cases and command routing logic to increase coverage.
   *Done when:* Test file `tests/test_cli.py` is created or updated, covering the missing paths in `lestinxor/cli.py`, and the total coverage increases, maintaining the overall >85% requirement.
 
-- [ ] **L9: Improve test coverage for `lestinxor/llm.py`.** `llm.py` has lower coverage than other core components. Add tests to cover LLM retry mechanisms and specific edge cases of `BaseException` handling.
+- [x] **L9: Improve test coverage for `lestinxor/llm.py`.** `llm.py` has lower coverage than other core components. Add tests to cover LLM retry mechanisms and specific edge cases of `BaseException` handling.
   *Done when:* Test file `tests/test_llm.py` has tests added to cover the retry logic and initialization errors in `llm.py`.
