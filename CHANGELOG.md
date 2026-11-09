@@ -3,6 +3,7 @@
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+- Added tests in `tests/test_llm.py` to cover initialization errors, LLM retry mechanisms, and edge cases for HTTP/URL error handling in `lestinxor/llm.py` (L9).
 - Added tests in `tests/test_cli.py` to cover argument parsing edge cases and command routing logic for `lestinxor/cli.py` (L8).
 - fix: test dependency issue in `test_owner_sig.py` (L7). The import path is updated from `tests.test_unisync_supabase` to `test_unisync_supabase` to correctly resolve the test dependency when running pytest on the codebase.
 - fix: malformed ledger rows are refused with `ProtocolError` (L10). `append_record` checks every field's presence and type and `from_jsonl` reports non-JSON lines by number, instead of crashing with KeyError/TypeError/AttributeError. Seeded replay fuzz tests (signed and unsigned ledgers) prove damaged history is refused and only true prefixes are accepted.
