@@ -24,6 +24,15 @@ How this repo links to Jonny's other systems (Sebastian, cross-testing, fix requ
 
 ## Proposed
 
+
+- [ ] **L11: Cover contracts.py fallback path.** Line 69 in `lestinxor/contracts.py` is untested.
+  *Done when:* `lestinxor/contracts.py` is at 100% line coverage and a test asserts the fallback artifact behavior.
+
+- [ ] **L12: Cover router.py unknown role error.** Line 27 in `lestinxor/router.py` is untested.
+  *Done when:* `lestinxor/router.py` is at 100% line coverage and a test asserts the `ValueError` is raised for an unknown role.
+
+- [ ] **L13: Cover stages.py JSON parse error.** Lines 86-87 in `lestinxor/stages.py` are untested.
+  *Done when:* `lestinxor/stages.py` is at 100% line coverage and a test asserts the fallback behavior when the JSON is malformed but decoded as None.
 (Agents add up to 3 items here when Ready is empty.)
 - [x] **L7: Fix test dependency issue in `test_owner_sig.py`.** The test file `tests/test_owner_sig.py` currently attempts to import `FakeRest` and `URL` from `tests.test_unisync_supabase`. The codebase test coverage command `python -m pytest --cov=lestinxor` fails due to `ModuleNotFoundError: No module named 'tests'`.
   *Done when:* The import path in `test_owner_sig.py` is updated to correctly resolve the test dependency, and running `python -m pytest --cov=lestinxor` passes without failure.
