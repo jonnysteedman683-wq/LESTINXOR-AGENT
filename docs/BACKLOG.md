@@ -33,3 +33,8 @@ How this repo links to Jonny's other systems (Sebastian, cross-testing, fix requ
 
 - [x] **L9: Improve test coverage for `lestinxor/llm.py`.** `llm.py` has lower coverage than other core components. Add tests to cover LLM retry mechanisms and specific edge cases of `BaseException` handling.
   *Done when:* Test file `tests/test_llm.py` has tests added to cover the retry logic and initialization errors in `llm.py`.
+- [ ] **L11: Improve test coverage for `lestinxor/gauntlet_core.py`.** The vendored `gauntlet_core.py` has missing coverage for error paths in `next_stage`, `parse_prediction` and `parse_verdict`. Add tests for negative loops, malformed lines, unknown keys, exceeding file/command limits, empty predictions, and unparseable/long commands. *Done when:* The missing lines in `gauntlet_core.py` are covered in `tests/test_gauntlet_core.py` and overall coverage increases.
+
+- [ ] **L12: Improve test coverage for `lestinxor/orchestrator.py`.** The outer loop orchestrator has missing coverage for validation of `crossover_rate` and `strategies`/`mutations` limits, as well as aborting when there are no viable thoughts, and catching synthesis exceptions. *Done when:* `tests/test_orchestrator.py` covers these missing lines in `lestinxor/orchestrator.py`.
+
+- [ ] **L13: Improve test coverage for `lestinxor/tools.py`.** `tools.py` is missing coverage on validation paths (e.g. invalid scopes) and error handling during tool execution. *Done when:* `tests/test_tools.py` covers the missing lines in `lestinxor/tools.py`.
