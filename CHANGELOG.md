@@ -3,6 +3,7 @@
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+- feat: register `steward` (Bastion) and `vigil` (`jonnysteedman683-wq/VIGIL`) as watchers in `DEFAULT_AGENTS` and the `unisync_agents` seed (L14), so ledgers containing their heartbeats replay. Like every watcher they can report and escalate but never claim, dispatch or approve.
 - Added tests in `tests/test_llm.py` to cover LLM retry mechanisms and specific edge cases of `BaseException` handling (L9).
 - Added tests in `tests/test_cli.py` to cover argument parsing edge cases and command routing logic for `lestinxor/cli.py` (L8).
 - fix: test dependency issue in `test_owner_sig.py` (L7). The import path is updated from `tests.test_unisync_supabase` to `test_unisync_supabase` to correctly resolve the test dependency when running pytest on the codebase.

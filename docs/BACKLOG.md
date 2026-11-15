@@ -15,6 +15,7 @@ How this repo links to Jonny's other systems (Sebastian, cross-testing, fix requ
 - [x] **L6: Owner signatures.** Owner-role entries (approvals, halts) are checked by name only, so anyone who can write rows can post as the owner. Add stdlib hash-based signatures and enforce them in `Ledger` when an owner key is configured. *Done when* unsigned/forged/reused owner entries are refused on post and replay, with tests.
 
 - [x] **L10: Malformed ledger rows are refused cleanly.** Found by fuzzing (LinX hardening 7): replaying a row with a missing or wrongly typed field, a non-object line or broken JSON crashed with KeyError/TypeError/AttributeError instead of ProtocolError. *Done when* every damaged history raises ProtocolError and anything accepted is a true prefix (seeded fuzz tests, signed and unsigned).
+- [x] **L14: Register `steward` and `vigil` as watchers.** Bastion's steward and the VIGIL security scout already post heartbeats through the UniSync gateway, but neither is in `DEFAULT_AGENTS`, so `Ledger.from_jsonl` refuses any ledger that contains their posts. *Done when* both are watchers in `DEFAULT_AGENTS` and the `unisync_agents` seed, ledgers with their heartbeats replay, and tests show they can never claim, dispatch or approve.
 
 ## 🔒 Owner decision
 
