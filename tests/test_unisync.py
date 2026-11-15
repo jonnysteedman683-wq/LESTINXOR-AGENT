@@ -315,3 +315,38 @@ class TestLinXSystemsRegistered(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestWatchersRegistered(unittest.TestCase):
+    """Bastion's steward and the VIGIL security scout post as watchers (L14)."""
+
+    def test_roles(self):
+        roles = {card.name: card.role for card in DEFAULT_AGENTS}
+        self.assertEqual(roles["steward"], Role.WATCHER)
+        self.assertEqual(roles["vigil"], Role.WATCHER)
+
+    def test_ledgers_with_their_heartbeats_replay(self):
+        lg = ledger()
+        lg.post("steward", Kind.HEARTBEAT)
+        lg.post("vigil", Kind.HEARTBEAT, flow="vigil-scan", ok=True)
+        self.assertTrue(Ledger.from_jsonl(lg.to_jsonl()).verify())
+
+    def test_watchers_never_claim_dispatch_or_approve(self):
+        lg = ledger()
+        lg.post("jonny", Kind.TASK_REQUEST, "w-1", title="x", requires_approval=True)
+        for name in ("steward", "vigil"):
+            lg.post(name, Kind.ESCALATE, "w-1", reason="finding")
+            for kind, body in (
+                (Kind.TASK_CLAIM, {}),
+                (Kind.TASK_REQUEST, {"title": "y"}),
+                (Kind.APPROVAL_DECISION, {"approved": True}),
+            ):
+                with self.assertRaises(ProtocolError):
+                    lg.post(name, kind, "w-1", **body)
+
+    def test_schema_seeds_them(self):
+        from pathlib import Path
+
+        sql = (Path(__file__).resolve().parents[1] / "unisync" / "schema.sql").read_text()
+        self.assertIn("('steward',         'watcher',      '{}')", sql)
+        self.assertIn("('vigil',           'watcher',      '{jonnysteedman683-wq/VIGIL}')", sql)

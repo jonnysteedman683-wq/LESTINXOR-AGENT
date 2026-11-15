@@ -15,6 +15,7 @@ How this repo links to Jonny's other systems (Sebastian, cross-testing, fix requ
 - [x] **L6: Owner signatures.** Owner-role entries (approvals, halts) are checked by name only, so anyone who can write rows can post as the owner. Add stdlib hash-based signatures and enforce them in `Ledger` when an owner key is configured. *Done when* unsigned/forged/reused owner entries are refused on post and replay, with tests.
 
 - [x] **L10: Malformed ledger rows are refused cleanly.** Found by fuzzing (LinX hardening 7): replaying a row with a missing or wrongly typed field, a non-object line or broken JSON crashed with KeyError/TypeError/AttributeError instead of ProtocolError. *Done when* every damaged history raises ProtocolError and anything accepted is a true prefix (seeded fuzz tests, signed and unsigned).
+- [x] **L14: Register `steward` and `vigil` as watchers.** Bastion's steward and the VIGIL security scout already post heartbeats through the UniSync gateway, but neither is in `DEFAULT_AGENTS`, so `Ledger.from_jsonl` refuses any ledger that contains their posts. *Done when* both are watchers in `DEFAULT_AGENTS` and the `unisync_agents` seed, ledgers with their heartbeats replay, and tests show they can never claim, dispatch or approve.
 
 ## 🔒 Owner decision
 
@@ -31,5 +32,10 @@ How this repo links to Jonny's other systems (Sebastian, cross-testing, fix requ
 - [x] **L8: Improve test coverage for `lestinxor/cli.py`.** The current coverage for `cli.py` has several missing lines. Add tests to cover argument parsing edge cases and command routing logic to increase coverage.
   *Done when:* Test file `tests/test_cli.py` is created or updated, covering the missing paths in `lestinxor/cli.py`, and the total coverage increases, maintaining the overall >85% requirement.
 
-- [ ] **L9: Improve test coverage for `lestinxor/llm.py`.** `llm.py` has lower coverage than other core components. Add tests to cover LLM retry mechanisms and specific edge cases of `BaseException` handling.
+- [x] **L9: Improve test coverage for `lestinxor/llm.py`.** `llm.py` has lower coverage than other core components. Add tests to cover LLM retry mechanisms and specific edge cases of `BaseException` handling.
   *Done when:* Test file `tests/test_llm.py` has tests added to cover the retry logic and initialization errors in `llm.py`.
+- [ ] **L11: Improve test coverage for `lestinxor/gauntlet_core.py`.** The vendored `gauntlet_core.py` has missing coverage for error paths in `next_stage`, `parse_prediction` and `parse_verdict`. Add tests for negative loops, malformed lines, unknown keys, exceeding file/command limits, empty predictions, and unparseable/long commands. *Done when:* The missing lines in `gauntlet_core.py` are covered in `tests/test_gauntlet_core.py` and overall coverage increases.
+
+- [ ] **L12: Improve test coverage for `lestinxor/orchestrator.py`.** The outer loop orchestrator has missing coverage for validation of `crossover_rate` and `strategies`/`mutations` limits, as well as aborting when there are no viable thoughts, and catching synthesis exceptions. *Done when:* `tests/test_orchestrator.py` covers these missing lines in `lestinxor/orchestrator.py`.
+
+- [ ] **L13: Improve test coverage for `lestinxor/tools.py`.** `tools.py` is missing coverage on validation paths (e.g. invalid scopes) and error handling during tool execution. *Done when:* `tests/test_tools.py` covers the missing lines in `lestinxor/tools.py`.

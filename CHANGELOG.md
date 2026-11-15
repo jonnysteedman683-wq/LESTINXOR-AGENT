@@ -4,6 +4,9 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 - test: improved test coverage for `lestinxor/cli.py` (L8). Added tests for argument parsing and command routing.
+- feat: register `steward` (Bastion) and `vigil` (`jonnysteedman683-wq/VIGIL`) as watchers in `DEFAULT_AGENTS` and the `unisync_agents` seed (L14), so ledgers containing their heartbeats replay. Like every watcher they can report and escalate but never claim, dispatch or approve.
+- Added tests in `tests/test_llm.py` to cover LLM retry mechanisms and specific edge cases of `BaseException` handling (L9).
+- Added tests in `tests/test_cli.py` to cover argument parsing edge cases and command routing logic for `lestinxor/cli.py` (L8).
 - fix: test dependency issue in `test_owner_sig.py` (L7). The import path is updated from `tests.test_unisync_supabase` to `test_unisync_supabase` to correctly resolve the test dependency when running pytest on the codebase.
 - fix: malformed ledger rows are refused with `ProtocolError` (L10). `append_record` checks every field's presence and type and `from_jsonl` reports non-JSON lines by number, instead of crashing with KeyError/TypeError/AttributeError. Seeded replay fuzz tests (signed and unsigned ledgers) prove damaged history is refused and only true prefixes are accepted.
 - feat: owner signatures (L6). `lestinxor/owner_sig.py` adds stdlib-only hash-based signatures (Lamport + Merkle tree); `Ledger(owner_root=, owner_from=, signer=)` refuses unsigned, forged, moved or key-reusing owner entries on post and replay; `SupabaseLedger` passes them through; new `Ledger.commit`. Off unless `owner_root` is set.
