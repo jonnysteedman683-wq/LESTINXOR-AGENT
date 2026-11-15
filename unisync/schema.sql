@@ -28,7 +28,9 @@ insert into public.unisync_agents (name, role, repos) values
     ('o0',              'orchestrator', '{jonnysteedman683-wq/O0}'),
     ('grok',            'watcher',      '{jonnysteedman683-wq/Sebastian}'),
     ('coordinator-bot', 'watcher',      '{}'),
-    ('vortex',          'watcher',      '{jonnysteedman683-wq/Vortex-MCP}')
+    ('vortex',          'watcher',      '{jonnysteedman683-wq/Vortex-MCP}'),
+    ('steward',         'watcher',      '{}'),
+    ('vigil',           'watcher',      '{jonnysteedman683-wq/VIGIL}')
 on conflict (name) do nothing;
 
 create table if not exists public.unisync_events (
