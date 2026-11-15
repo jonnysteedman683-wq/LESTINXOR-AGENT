@@ -3,6 +3,7 @@
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+- test: improved test coverage for `lestinxor/cli.py` (L8). Added tests for argument parsing and command routing.
 - feat: register `steward` (Bastion) and `vigil` (`jonnysteedman683-wq/VIGIL`) as watchers in `DEFAULT_AGENTS` and the `unisync_agents` seed (L14), so ledgers containing their heartbeats replay. Like every watcher they can report and escalate but never claim, dispatch or approve.
 - Added tests in `tests/test_llm.py` to cover LLM retry mechanisms and specific edge cases of `BaseException` handling (L9).
 - Added tests in `tests/test_cli.py` to cover argument parsing edge cases and command routing logic for `lestinxor/cli.py` (L8).
